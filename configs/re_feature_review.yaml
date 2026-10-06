@@ -1,0 +1,33 @@
+# FR-05 / RQ2: reverse engineering-guided feature review.
+#
+# Record here what the Ghidra case study (docs/re_case_study/) concluded about
+# each feature. Patterns are fnmatch-style globs over feature names
+# (run `pemd features` to list them). Decisions:
+#   prioritise - always kept, even if the statistical ranking would drop it
+#   retain     - eligible for statistical selection (the default)
+#   discard    - removed before ranking (e.g. trivially mutable by an attacker)
+#
+# Every entry needs a rationale and the sample(s) / case study note that support it,
+# because the dissertation has to justify each decision.
+
+prioritise:
+  - pattern: "api_cat:*"
+    rationale: >-
+      Behaviour-bearing API capability groups (process injection, anti-debugging,
+      dynamic API resolution, ...). Changing them changes what the program can do,
+      so they survive byte-level mutation better than raw bytes.
+    evidence: "TODO: link case study note, e.g. docs/re_case_study/sample_01.md"
+  - pattern: "sec:entropy_max"
+    rationale: "High-entropy sections indicate packed or encrypted payloads seen during unpacking."
+    evidence: "TODO"
+  - pattern: "sec:n_wx"
+    rationale: "Writable + executable sections are needed by self-modifying / unpacking stubs."
+    evidence: "TODO"
+
+discard:
+  - pattern: "hdr:timedatestamp"
+    rationale: "Trivially forged by the compiler or attacker; also a source of temporal leakage."
+    evidence: "Design decision, report Section 3.3.1"
+  - pattern: "hdr:checksum"
+    rationale: "Mostly zero for both classes; set or cleared freely without changing behaviour."
+    evidence: "TODO: confirm on dataset"

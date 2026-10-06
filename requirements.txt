@@ -1,0 +1,17 @@
+# Pinned versions for the analysis VM (PRD Section 11, NFR-04: record library versions).
+# Python 3.11 on Ubuntu 22.04.
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.4.2
+xgboost==2.0.3
+pefile==2023.2.7
+lief==0.14.1
+capstone==5.0.6
+pyyaml==6.0.1
+joblib==1.4.2
+requests==2.32.3
+yara-python==4.5.1
+
+# Development
+pytest==8.2.2
+ruff==0.4.10

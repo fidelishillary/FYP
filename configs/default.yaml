@@ -1,0 +1,87 @@
+# Default experiment configuration. Every run copies this file into its output
+# directory together with library versions so results can be reproduced (NFR-04).
+
+seed: 42
+
+paths:
+  raw_malware: data/raw/malware        # inside the isolated VM only (NFR-01)
+  raw_benign: data/raw/benign
+  dataset: data/processed/dataset.npz
+  experiments: experiments
+
+features:                               # FR-02, report Table 3.1
+  max_file_size_mb: 64                  # larger files are logged and skipped
+  hash_dims:
+    imports_dll: 128
+    imports_func: 512
+    exports: 64
+    section_names: 32
+    opcode_ngrams: 256
+  opcode:
+    enabled: true
+    ngram: 2                            # mnemonic n-gram length
+    max_bytes: 65536                    # bytes disassembled from the entry-point section
+  strings:
+    min_length: 5
+
+data:                                   # report Section 3.5
+  split: { train: 0.70, val: 0.15, test: 0.15 }
+  time_based: auto                      # auto | true | false (FR-13: time split where dates exist)
+  balance_to: null                      # e.g. 6000 to sub-sample each class to 6,000
+
+selection:                              # FR-04
+  k: 300                                # number of features kept
+  methods: [chi2, mutual_info]
+  re_review: configs/re_feature_review.yaml   # FR-05 retain / prioritise / discard decisions
+
+models:                                 # FR-06, report Table 3.2
+  class_weight: balanced                # NFR-07
+  random_forest:
+    n_estimators: 300
+    max_depth: null
+    min_samples_leaf: 1
+  xgboost:
+    n_estimators: 400
+    max_depth: 8
+    learning_rate: 0.1
+    subsample: 0.9
+    colsample_bytree: 0.8
+  svm:
+    C: 1.0
+    kernel: rbf
+    gamma: scale
+
+gate:                                   # FR-08, report Section 3.4
+  t_benign: 0.20                        # p(malware) <  t_benign  -> cleared as benign
+  t_malware: 0.80                       # p(malware) >= t_malware -> reported as malware
+  tune:                                 # tuned on the validation set
+    max_fpr: 0.05                       # PRD 10.1
+    max_fnr: 0.03
+    grid_step: 0.01
+
+evaluation:
+  cv_folds: 5                           # FR-13
+  top_features: 30                      # FR-11
+  escalation_policy: oracle             # oracle | static | verdicts (see docs/evaluation_protocol.md)
+  dynamic_verdicts: null                # CSV (sha256,verdict[,seconds]) from CAPE runs
+  dynamic_seconds_estimate: 180         # used only when no measured CAPE time is available
+
+targets:                                # PRD Section 10, compared automatically in reports
+  fpr_max: 0.05
+  fnr_max: 0.03
+  models:
+    random_forest: { accuracy: 0.95, f1: 0.94, roc_auc: 0.97 }
+    xgboost:       { accuracy: 0.96, f1: 0.95, roc_auc: 0.98 }
+    svm:           { accuracy: 0.92, f1: 0.90, roc_auc: 0.95 }
+  workload_reduction: 0.60
+
+baseline:                               # FR-09
+  yara_rules: rules/yara
+
+dynamic:                                # FR-14 (optional)
+  enabled: false
+  cape_url: http://192.168.56.10:8000   # host-only network address of the CAPE VM
+  api_token: null
+  timeout_s: 600
+  poll_interval_s: 15
+  malscore_threshold: 5.0

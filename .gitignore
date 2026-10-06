@@ -1,0 +1,41 @@
+# ---- SAFETY: never commit samples or derived binaries (NFR-01, NFR-02, PRD 4.2) ----
+data/raw/**
+data/external/**
+data/processed/**
+!data/**/.gitkeep
+!data/README.md
+*.exe
+*.dll
+*.sys
+*.scr
+*.bin
+*.zip
+*.7z
+*.rar
+*.vir
+*.malware
+
+# Experiment outputs (models and run logs are regenerated from config + seed)
+experiments/**
+!experiments/.gitkeep
+!experiments/README.md
+*.joblib
+*.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
