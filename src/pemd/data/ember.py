@@ -30,18 +30,23 @@ def _memmap(path: Path, dtype, ncols: int | None = None) -> np.ndarray:
     return arr
 
 
-def load_ember(ember_dir: str | Path, feature_version: int = 2) -> Dataset:
+def load_ember(ember_dir: str | Path, feature_version: int = 2,
+               per_class: int | None = None, seed: int = 42) -> Dataset:
+    """Load labelled EMBER rows. With ``per_class``, sample that many rows per class
+    *before* reading the feature matrix, so only the kept rows are loaded into RAM
+    (the full EMBER 2018 matrix is ~9 GB)."""
     ember_dir = Path(ember_dir)
     dim = EMBER_DIM[feature_version]
     Xs, ys = [], []
     for part in ("train", "test"):
         Xp, yp = ember_dir / f"X_{part}.dat", ember_dir / f"y_{part}.dat"
         if Xp.exists() and yp.exists():
-            Xs.append(np.asarray(_memmap(Xp, np.float32, dim)))
+            Xs.append(_memmap(Xp, np.float32, dim))
             ys.append(np.asarray(_memmap(yp, np.float32)))
     if not Xs:
         raise FileNotFoundError(f"no X_*.dat / y_*.dat in {ember_dir}")
-    X, y = np.vstack(Xs), np.concatenate(ys)
+    y = np.concatenate(ys)
+    offsets = np.cumsum([0] + [len(a) for a in ys])
 
     n = len(y)
     sha = np.array([""] * n, dtype=object)
@@ -55,9 +60,20 @@ def load_ember(ember_dir: str | Path, feature_version: int = 2) -> Dataset:
             sha = np.array([r.get("sha256", "") for r in rows], dtype=object)
             first_seen = np.array([r.get("appeared", "") for r in rows], dtype=object)
 
-    keep = y != -1
+    keep = np.flatnonzero(y != -1)  # -1 = unlabelled
+    if per_class:
+        rng = np.random.default_rng(seed)
+        keep = np.sort(np.concatenate([
+            rng.choice(c, size=min(per_class, len(c)), replace=False)
+            for c in (keep[y[keep] == 0], keep[y[keep] == 1])
+        ]))
+    X = np.empty((len(keep), dim), dtype=np.float32)
+    for part, (lo, hi) in enumerate(zip(offsets[:-1], offsets[1:])):
+        sel = (keep >= lo) & (keep < hi)
+        X[sel] = Xs[part][keep[sel] - lo]
+
     names = [f"ember:{i}" for i in range(dim)]
     return Dataset(
-        X=X[keep], y=y[keep].astype(int), feature_names=names, sha256=sha[keep],
+        X=X, y=y[keep].astype(int), feature_names=names, sha256=sha[keep],
         first_seen=first_seen[keep],
     )

@@ -128,3 +128,20 @@ def test_sandbox_must_be_isolated():
     assert_isolated("http://127.0.0.1:8000")
     with pytest.raises(SandboxSafetyError):
         assert_isolated("http://8.8.8.8:8000")
+
+
+def test_load_ember_samples_per_class(tmp_path):
+    from pemd.data.ember import load_ember
+
+    rng = np.random.default_rng(0)
+    for part, n in (("train", 50), ("test", 20)):
+        X = rng.normal(size=(n, 2381)).astype(np.float32)
+        y = np.array(([-1, 0, 1] * n)[:n], dtype=np.float32)
+        X[:, 0] = y  # lets the test check rows stay aligned with labels
+        X.tofile(tmp_path / f"X_{part}.dat")
+        y.tofile(tmp_path / f"y_{part}.dat")
+    full = load_ember(tmp_path)
+    assert -1 not in full.y and len(full) == 46
+    ds = load_ember(tmp_path, per_class=10, seed=1)
+    assert (ds.y == 0).sum() == 10 and (ds.y == 1).sum() == 10
+    assert np.array_equal(ds.X[:, 0], ds.y)

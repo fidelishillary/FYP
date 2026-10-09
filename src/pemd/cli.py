@@ -62,14 +62,12 @@ def cmd_extract(args) -> int:
 
 
 def cmd_import_ember(args) -> int:
-    from pemd.data.dataset import balance
     from pemd.data.ember import load_ember
 
     cfg = _cfg(args)
-    ds = load_ember(args.ember_dir, args.feature_version)
     per_class = args.balance or cfg["data"].get("balance_to")
-    if per_class:
-        ds = balance(ds, int(per_class), cfg["seed"])
+    ds = load_ember(args.ember_dir, args.feature_version,
+                    per_class=int(per_class) if per_class else None, seed=cfg["seed"])
     out = Path(args.out or "data/processed/ember.npz")
     ds.save(out)
     print(json.dumps(ds.summary(), indent=2))
