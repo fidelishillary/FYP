@@ -4,7 +4,9 @@
     pemd extract --malware-dir D --benign-dir D    build a dataset from raw PE files (in the VM)
     pemd import-ember --ember-dir D                build a dataset from EMBER features
     pemd run --dataset F [--cv]                    full experiment + report
-    pemd scan FILE --run-dir R [--dynamic]         proof-of-concept scanner (FR-15)
+    pemd scan FILE --run-dir R [--dynamic] [--log] proof-of-concept scanner (FR-15)
+    pemd demo                                      harmless synthetic end-to-end demo
+    pemd dashboard                                 web dashboard (monitoring, scan, results)
 """
 
 from __future__ import annotations
@@ -14,8 +16,6 @@ import json
 import logging
 import sys
 from pathlib import Path
-
-import numpy as np
 
 
 def _cfg(args):
@@ -86,63 +86,82 @@ def cmd_run(args) -> int:
 
 
 def cmd_scan(args) -> int:
-    import joblib
+    from pemd.gate.prioritisation import ESCALATE
+    from pemd.scanner import LayoutMismatchError, Scanner
 
-    from pemd.features.extractor import FeatureExtractor, InvalidPEError
-    from pemd.gate.prioritisation import ESCALATE, DecisionGate
-    from pemd.models.classifiers import malware_proba, per_sample_contributions
-    from pemd.selection.selector import FeatureSelector
-
-    run = Path(args.run_dir)
     cfg = _cfg(args)
-    gate_info = json.loads((run / "gate.json").read_text(encoding="utf-8"))
-    model_name = args.model or gate_info["model"]
-    model = joblib.load(run / f"{model_name}.joblib")
-    selector = FeatureSelector.load(run / "selector.joblib")
-    gate = DecisionGate(gate_info["t_benign"], gate_info["t_malware"])
-    vocab_path = run / "vocab.json"
-    vocab = json.loads(vocab_path.read_text(encoding="utf-8")) if vocab_path.exists() else {}
-
-    extractor = FeatureExtractor(cfg)
-    if selector.input_names_ != extractor.names:
-        print("error: this run was trained on a different feature layout (e.g. EMBER); "
-              "train on a dataset built with `pemd extract` to scan raw files", file=sys.stderr)
-        return 2
     try:
-        res = extractor.extract_file(args.file)  # static only - the file is never executed
-    except (InvalidPEError, OSError) as exc:
-        print(json.dumps({"file": str(args.file), "error": f"rejected: {exc}"}, indent=2))
-        return 1
+        scanner = Scanner(args.run_dir, cfg, model=args.model)
+    except LayoutMismatchError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    out = scanner.scan_file(args.file, top=args.top)  # static only - never executed
+    if "error" not in out and out["route"] == ESCALATE and args.dynamic:
+        out = scanner.escalate(args.file, out)
+    if args.log:
+        from pemd.history import ScanHistory
 
-    x = selector.transform(res.vector.reshape(1, -1))
-    p = float(malware_proba(model, x)[0])
-    route = str(gate.route(np.array([p]))[0])
-    contrib = per_sample_contributions(model, x[0])
-    top = []
-    if contrib is not None:
-        order = np.argsort(-np.abs(contrib))[: args.top]
-        names = selector.selected_names
-        top = [{"feature": names[i], "tokens": vocab.get(names[i], []),
-                "value": float(x[0, i]), "contribution": float(contrib[i])}
-               for i in order if contrib[i] != 0]
-    out = {
-        "file": str(args.file), "sha256": res.sha256, "model": model_name,
-        "p_malware": round(p, 4), "route": route,
-        "verdict": {"benign": "benign", "malware": "malware"}.get(route, "uncertain"),
-        "static_seconds": round(res.seconds, 4),
-        "influential_features": top,
-        "explanation_method": ("TreeSHAP (xgboost pred_contribs)" if model_name == "xgboost"
-                               else "global importance of features present (approximation)"),
-    }
-    if route == ESCALATE and args.dynamic:
-        from pemd.dynamic.cape import CapeClient
-
-        d = CapeClient(cfg).analyse(args.file)
-        out["dynamic"] = {"task_id": d.task_id, "malscore": d.malscore,
-                          "signatures": d.signatures, "seconds": round(d.seconds, 1)}
-        out["verdict"] = "malware" if d.verdict else "benign"
+        ScanHistory().add(out, run=Path(args.run_dir).name, source="cli")
     print(json.dumps(out, indent=2))
+    return 1 if "error" in out else 0
+
+
+def cmd_demo(args) -> int:
+    """Synthetic end-to-end demo: harmless generated PEs -> dataset -> run -> logged scans."""
+    from pemd.data.dataset import build_from_directories
+    from pemd.history import ScanHistory
+    from pemd.pipeline import run_experiment
+    from pemd.scanner import Scanner
+    from pemd.synthetic import generate_corpus
+
+    cfg = _cfg(args)
+    cfg["demo"] = True  # recorded in the run's config.yaml; the dashboard shows a banner
+    root = Path(args.out)
+    print(f"[1/4] generating {2 * args.n} harmless synthetic PE files in {root} ...")
+    paths = generate_corpus(root, n_per_class=args.n, seed=cfg["seed"])
+    print("[2/4] extracting static features ...")
+    ds_path = Path("data/processed/demo.npz")
+    ds = build_from_directories(cfg, paths["malware"], paths["benign"], dates_csv=paths["dates"],
+                                rejected_log=ds_path.with_suffix(".rejected.csv"))
+    ds.save(ds_path)
+    print("[3/4] selecting features, training RF / XGBoost / SVM, tuning the gate ...")
+    run = run_experiment(cfg, ds_path, name="demo", do_cv=not args.no_cv)
+    print("[4/4] scanning the hold-out samples into the dashboard history ...")
+    scanner, history = Scanner(run, cfg), ScanHistory()
+    for f in sorted(paths["samples"].iterdir()):
+        history.add(scanner.scan_file(f), run=run.name, source="demo")
+    results = json.loads((run / "results.json").read_text(encoding="utf-8"))
+    best = results["best_model"]
+    test = results["models"][best]["test"]
+    print(f"\nDone. Run folder: {run}")
+    print(f"Best model {best}: accuracy {test['accuracy']:.3f}, F1 {test['f1']:.3f}, "
+          f"ROC-AUC {test['roc_auc']:.3f}  (synthetic data - not research results)")
+    print("Next: pemd dashboard")
     return 0
+
+
+def cmd_dashboard(args) -> int:
+    import os
+    import subprocess
+
+    from pemd.config import DEFAULT_CONFIG
+
+    app = Path(__file__).resolve().parent / "dashboard" / "app.py"
+    env = dict(os.environ)
+    if args.config:
+        env["PEMD_CONFIG"] = str(Path(args.config).resolve())
+    project_root = DEFAULT_CONFIG.parents[1]
+    cmd = [sys.executable, "-m", "streamlit", "run", str(app),
+           "--server.address", "127.0.0.1",  # local only, never exposed to the network
+           "--server.port", str(args.port),
+           "--server.maxUploadSize", "64",
+           "--browser.gatherUsageStats", "false",
+           "--server.headless", "true" if args.no_browser else "false"]
+    print(f"Dashboard: http://127.0.0.1:{args.port}   (Ctrl+C to stop)")
+    try:
+        return subprocess.call(cmd, cwd=project_root, env=env)
+    except KeyboardInterrupt:
+        return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -186,7 +205,20 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--top", type=int, default=10)
     s.add_argument("--dynamic", action="store_true",
                    help="send escalated files to the CAPE sandbox (dynamic.enabled must be true)")
+    s.add_argument("--log", action="store_true",
+                   help="record the result in the dashboard scan history")
     s.set_defaults(func=cmd_scan)
+
+    s = sub.add_parser("demo", help="harmless synthetic end-to-end demo (fills the dashboard)")
+    s.add_argument("--n", type=int, default=300, help="synthetic files per class")
+    s.add_argument("--out", default="data/demo", help="where to write the synthetic files")
+    s.add_argument("--no-cv", action="store_true", help="skip cross-validation (faster)")
+    s.set_defaults(func=cmd_demo)
+
+    s = sub.add_parser("dashboard", help="start the web dashboard on http://127.0.0.1:8501")
+    s.add_argument("--port", type=int, default=8501)
+    s.add_argument("--no-browser", action="store_true", help="do not open a browser tab")
+    s.set_defaults(func=cmd_dashboard)
     return p
 
 

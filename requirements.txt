@@ -11,6 +11,9 @@ pyyaml==6.0.1
 joblib==1.4.2
 requests==2.32.3
 yara-python==4.5.1
+streamlit==1.39.0                  # dashboard
+altair==5.4.1                      # dashboard charts
+pyarrow==17.0.0                    # used by streamlit; newer releases need numpy 2
 
 # Development
 pytest==8.2.2

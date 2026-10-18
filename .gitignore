@@ -22,6 +22,10 @@ experiments/**
 *.joblib
 *.npz
 
+# Dashboard scan history (metadata of scanned files) and the synthetic demo corpus
+data/*.db
+data/demo/**
+
 # Python
 __pycache__/
 *.py[cod]

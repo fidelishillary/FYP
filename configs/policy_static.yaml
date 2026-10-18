@@ -1,0 +1,5 @@
+# Lower bound of the hybrid result: escalated files keep the static model's label
+# (the sandbox adds nothing). Report it next to the default `oracle` upper bound.
+#   pemd --config configs/policy_static.yaml run --dataset data/processed/ember.npz --name ember_static
+evaluation:
+  escalation_policy: static

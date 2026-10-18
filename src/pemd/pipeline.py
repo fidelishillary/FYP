@@ -7,7 +7,8 @@ Each run writes to experiments/<timestamp>_<name>/:
     selection.csv, selector.joblib  feature ranking and RE decisions (FR-04, FR-05)
     <model>.joblib                  trained models (FR-06)
     gate.json                       tuned thresholds (FR-08)
-    predictions.csv                 per-sample test scores and routes
+    predictions.csv                 per-sample test scores (every model) and routes
+    predictions_val.csv             the same for the validation split (gate tuning)
     feature_importance.csv          (FR-11)
     results.json, report.md         all metrics (FR-10, FR-12, FR-13)
 """
@@ -168,10 +169,15 @@ def run_experiment(cfg: dict, dataset_path: str | Path, name: str = "run",
             log.warning("YARA baseline skipped: %s", exc)
             results["baselines"]["yara"] = {"skipped": str(exc)}
 
-    pd.DataFrame({
-        "sha256": ds.sha256[sp.test], "label": yte, "p_malware": probas_test[best],
-        "route": gate.route(probas_test[best]),
-    }).to_csv(run / "predictions.csv", index=False)
+    # per-sample scores of every model, so the dashboard can draw ROC curves and
+    # re-evaluate the gate; p_malware/route are those of the best model
+    for fname, idx, yy, probas in (("predictions.csv", sp.test, yte, probas_test),
+                                   ("predictions_val.csv", sp.val, yva, probas_val)):
+        pd.DataFrame({
+            "sha256": ds.sha256[idx], "label": yy, "p_malware": probas[best],
+            "route": gate.route(probas[best]),
+            **{f"p_{m}": probas[m] for m in models},
+        }).to_csv(run / fname, index=False)
 
     if do_cv:
         results["cross_validation"] = cross_validate(cfg, Xtr, ytr, models)

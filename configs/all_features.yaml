@@ -1,0 +1,6 @@
+# Ablation for FR-04: keep every feature instead of the top 300 (chi-square ranking is still
+# recorded in selection.csv; mutual information is skipped because nothing is dropped).
+#   pemd --config configs/all_features.yaml run --dataset data/processed/ember.npz --name ember_allfeat
+selection:
+  k: 100000
+  methods: [chi2]

@@ -28,7 +28,9 @@ PE file ──► Static Analysis Module ──► ML classifier ──► Prior
 | Hash-signature and YARA baselines | `pemd.baseline` | FR-09 |
 | Metrics, hybrid/efficiency analysis, cross-validation, report | `pemd.evaluation`, `pemd.pipeline` | FR-10–13 |
 | CAPE sandbox client, restricted to private/host-only addresses | `pemd.dynamic` | FR-14 |
-| `pemd scan` proof-of-concept interface | `pemd.cli` | FR-15 |
+| `pemd scan` proof-of-concept interface, reusable scanner | `pemd.cli`, `pemd.scanner` | FR-15 |
+| Web dashboard: monitoring, scanning, results, run comparison, gate what-if | `pemd.dashboard`, `pemd.history` | FR-08, FR-10–12, FR-15 |
+| Harmless synthetic demo corpus (`pemd demo`) | `pemd.synthetic` | NFR-01, NFR-02 |
 
 ## Setup
 
@@ -40,6 +42,22 @@ pip install -r requirements.txt   # pinned versions (NFR-04)
 pip install -e .
 make test                         # the tests use synthetic, harmless PE files
 ```
+
+> The project folder path must contain only English (ASCII) characters, e.g. `C:\fyp\FYP`.
+> Editable installs and YARA fail under paths such as `...\文档\...` on Python 3.11.
+
+## Quick start: demo + dashboard (no malware needed)
+
+```bash
+pemd demo          # 600 harmless synthetic PE files -> dataset -> trained run -> logged scans
+pemd dashboard     # opens http://127.0.0.1:8501
+```
+
+Dashboard pages: **Monitoring** (live triage statistics from the scan history), **Scan files**
+(upload or folder triage with verdict, gauge and TreeSHAP explanation), **Experiment results**
+(metrics vs PRD targets, ROC, confusion matrices, hybrid/efficiency, features, CV, report),
+**Compare runs** (e.g. with vs without RE review), **Gate lab** (threshold what-if and re-tuning)
+and **System** (config, environment, CAPE status, safety). The demo numbers are not research results.
 
 ## Usage
 
@@ -56,6 +74,8 @@ pemd extract --malware-dir data/raw/malware --benign-dir data/raw/benign \
 pemd run --name raw --cv
 pemd scan suspicious.exe --run-dir experiments/<run>      # verdict, confidence, top features
 pemd scan suspicious.exe --run-dir experiments/<run> --dynamic   # escalate to CAPE (if enabled)
+pemd scan suspicious.exe --run-dir experiments/<run> --log       # also record it for the dashboard
+pemd dashboard                                  # web dashboard on 127.0.0.1 only
 ```
 
 Each `run` writes `experiments/<timestamp>_<name>/`. The directory holds the config used, library versions, the git commit, the splits, the feature ranking, the models, the tuned gate, per-sample predictions, `results.json` and a `report.md` laid out like report Tables 4.1 and 4.2, with every PRD Section 10 target marked met or not met.

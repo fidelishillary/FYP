@@ -137,6 +137,7 @@ def build_from_directories(
             rows.append((res.vector, label, res.sha256, dates.get(res.sha256, ""), str(fp),
                          res.seconds))
     if rejected_log:
+        Path(rejected_log).parent.mkdir(parents=True, exist_ok=True)
         with open(rejected_log, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh)
             w.writerow(["path", "label", "reason"])

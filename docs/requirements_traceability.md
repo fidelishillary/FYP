@@ -22,7 +22,7 @@ Status key: ✅ implemented and tested · 🟡 implemented, still needs real dat
 | FR-12 Static vs escalated proportion, per-path time | Must | `evaluation/hybrid.py` | `test_hybrid_policies` | Table 4.2, efficiency analysis | ✅ (dynamic time measured once CAPE runs) |
 | FR-13 k-fold CV + time-based split | Should | `pipeline.cross_validate`, `data/dataset.split` | `test_split_time_based`, `test_end_to_end` | Validation design | ✅ |
 | FR-14 Dynamic fallback in CAPE/Cuckoo | Should | `dynamic/cape.py`, `pemd scan --dynamic`, `evaluation.dynamic_verdicts` CSV | `test_sandbox_must_be_isolated` | Dynamic case study | 🟡 needs the lab sandbox |
-| FR-15 Scan interface: verdict, confidence, influential features | Could | `pemd scan` (`cli.py`) | `test_end_to_end` | Interface demo | ✅ CLI (web UI: see open items) |
+| FR-15 Scan interface: verdict, confidence, influential features | Could | `pemd scan` (`cli.py`), `scanner.py`, web dashboard (`dashboard/`, Scan files + Monitoring pages) | `test_end_to_end`, `test_scanner_bytes_and_rejects`, `test_dashboard_pages_render` | Interface demo, dashboard screenshots | ✅ CLI + web dashboard |
 | FR-16 LSTM / sequence model | Could | — | — | — | ⬜ |
 | FR-17 Polymorphic-family robustness check | Could | — (reuse `pemd run` on a family-held-out dataset) | — | — | ⬜ |
 

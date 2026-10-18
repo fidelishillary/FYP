@@ -1,0 +1,11 @@
+# Learning-curve runs on larger EMBER samples (50k-100k). All features, a stronger XGBoost,
+# and run with `--models xgboost,random_forest` because SVM does not scale to this size.
+#   pemd --config configs/large_data.yaml run --dataset data/processed/ember100k.npz --name ember100k --models xgboost,random_forest
+selection:
+  k: 100000
+  methods: [chi2]
+models:
+  xgboost:
+    n_estimators: 800
+    learning_rate: 0.05
+    max_depth: 10
