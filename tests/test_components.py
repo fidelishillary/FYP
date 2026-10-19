@@ -145,3 +145,15 @@ def test_load_ember_samples_per_class(tmp_path):
     ds = load_ember(tmp_path, per_class=10, seed=1)
     assert (ds.y == 0).sum() == 10 and (ds.y == 1).sum() == 10
     assert np.array_equal(ds.X[:, 0], ds.y)
+
+
+def test_ember_feature_names_and_groups():
+    from pemd.data.ember import ember_feature_names, readable_ember_name
+    from pemd.pipeline import group_of
+
+    names = ember_feature_names(2)
+    assert len(names) == 2381 and len(ember_feature_names(1)) == 2351
+    assert names[0] == "ember_byte_hist:0" and names[512] == "ember_strings:numstrings"
+    assert names[616] == "ember_general:size" and names[-1] == "ember_datadir:dir14_vaddr"
+    assert readable_ember_name("ember:616") == "ember_general:size"
+    assert group_of("ember:700") == "ember_section" and group_of("imp:n_dlls") == "imp"

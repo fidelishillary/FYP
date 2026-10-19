@@ -1,0 +1,5 @@
+# RQ2 on EMBER: statistical top-300 selection plus the RE-guided review above
+# (prioritised groups are always kept, so the final set is larger than k).
+#   pemd --config configs/ember_re_guided.yaml run --dataset data/processed/ember.npz --name ember_re --cv
+selection:
+  re_review: configs/re_feature_review_ember.yaml

@@ -1,0 +1,22 @@
+# FR-05 / RQ2 for the EMBER track: the same reverse engineering rationale as
+# re_feature_review.yaml, expressed in EMBER's feature groups (see pemd.data.ember).
+# Patterns are fnmatch globs over names such as ember_imports:func_h12.
+
+prioritise:
+  - pattern: "ember_imports:*"
+    rationale: >-
+      Imported DLLs and functions encode what the program can do (injection, persistence,
+      crypto, networking). Hashed import columns are individually sparse, so chi-square and
+      mutual information rank them low, although together they carry the most signal.
+    evidence: "Measured: top-300 statistical selection kept 1 of 1,280 import columns, yet imports are the most important group when all features are kept (run ember_allfeat)."
+  - pattern: "ember_section:*"
+    rationale: "Section sizes, entropy and entry-section characteristics expose packing and W+X stubs."
+    evidence: "TODO: link Ghidra case study note on a packed sample"
+  - pattern: "ember_general:has_*"
+    rationale: "Presence of signature, TLS, debug info, resources and relocations reflects how the binary was built and protected."
+    evidence: "TODO"
+
+discard:
+  - pattern: "ember_header:coff_timestamp"
+    rationale: "Trivially forged and a source of temporal leakage (same decision as the raw track)."
+    evidence: "Design decision, report Section 3.3.1"

@@ -18,6 +18,8 @@ from pemd.dashboard.common import (
     score_histogram,
     selected_run,
 )
+from pemd.data.ember import readable_ember_name
+from pemd.pipeline import group_of
 
 
 def render() -> None:
@@ -176,6 +178,9 @@ def _features(run) -> None:
     if fi is None:
         st.info("No feature importance in this run.")
         return
+    # runs made before EMBER features were named store "ember:<column>"; show readable names
+    fi["feature"] = fi["feature"].map(readable_ember_name)
+    fi["group"] = fi["feature"].map(group_of)
     model = run.results.get("top_features", {}).get("model", run.best_model)
     n = st.slider("Top features", 10, 50, 20)
     top = fi.head(n).copy()
@@ -195,9 +200,15 @@ def _features(run) -> None:
         st.altair_chart(alt.Chart(groups).mark_bar().encode(
             x="importance:Q", y=alt.Y("group:N", sort="-x", title=None), color="group:N",
         ).properties(height=320), use_container_width=True)
-        st.caption("hdr = header, sec = sections/entropy, imp = imports, api_cat = RE-guided API "
-                   "capabilities, op = opcode n-grams, str = strings, byte_hist = bytes, "
-                   "meta = metadata.")
+        if groups["group"].str.startswith("ember_").any():
+            st.caption("EMBER groups: imports (hashed DLLs/functions), section (sizes, entropy, "
+                       "characteristics), header (COFF/optional header), general (size, "
+                       "debug, TLS, signature...), strings, byte_hist, byte_entropy, exports, "
+                       "datadir (data directories).")
+        else:
+            st.caption("hdr = header, sec = sections/entropy, imp = imports, api_cat = RE-guided "
+                       "API capabilities, op = opcode n-grams, str = strings, byte_hist = bytes, "
+                       "meta = metadata.")
     sel = run.csv("selection.csv")
     if sel is not None:
         st.subheader("Feature selection and RE review (FR-04, FR-05)")

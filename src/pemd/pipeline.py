@@ -36,7 +36,9 @@ log = logging.getLogger(__name__)
 
 
 def group_of(feature: str) -> str:
-    return feature.split(":", 1)[0]
+    from pemd.data.ember import readable_ember_name
+
+    return readable_ember_name(feature).split(":", 1)[0]
 
 
 def cross_validate(cfg: dict, X: np.ndarray, y: np.ndarray, models: list[str]) -> dict:

@@ -22,6 +22,53 @@ from pemd.data.dataset import Dataset
 
 EMBER_DIM = {1: 2351, 2: 2381}
 
+# Layout of EMBER's feature vector (ember/features.py, PEFeatureExtractor), in order.
+_GENERAL = ["size", "vsize", "has_debug", "exports", "imports", "has_relocations",
+            "has_resources", "has_signature", "has_tls", "symbols"]
+_STRINGS = (["numstrings", "avlength", "printables"] + [f"printabledist_{i}" for i in range(96)]
+            + ["printables_entropy", "paths", "urls", "registry", "MZ"])
+_HEADER = (["coff_timestamp"] + [f"machine_h{i}" for i in range(10)]
+           + [f"coff_characteristics_h{i}" for i in range(10)]
+           + [f"subsystem_h{i}" for i in range(10)]
+           + [f"dll_characteristics_h{i}" for i in range(10)]
+           + [f"magic_h{i}" for i in range(10)]
+           + [f"{a}_{b}_version" for b in ("image", "linker", "os", "subsystem")
+              for a in ("major", "minor")]
+           + ["sizeof_code", "sizeof_headers", "sizeof_heap_commit"])
+_SECTION = (["n_sections", "n_zero_size", "n_empty_name", "n_rx", "n_w"]
+            + [f"{k}_h{i}" for k in ("size", "entropy", "vsize", "entry_name",
+                                     "entry_characteristics") for i in range(50)])
+_IMPORTS = [f"lib_h{i}" for i in range(256)] + [f"func_h{i}" for i in range(1024)]
+_DATADIR = [f"dir{i}_{k}" for i in range(15) for k in ("size", "vaddr")]
+
+
+def ember_feature_names(feature_version: int = 2) -> list[str]:
+    """Readable names ``ember_<group>:<field>`` so feature importance can be reported per
+    EMBER feature group (RQ1) instead of as anonymous column numbers."""
+    groups = [
+        ("byte_hist", [str(i) for i in range(256)]),
+        ("byte_entropy", [str(i) for i in range(256)]),
+        ("strings", _STRINGS), ("general", _GENERAL), ("header", _HEADER),
+        ("section", _SECTION), ("imports", _IMPORTS),
+        ("exports", [f"h{i}" for i in range(128)]),
+    ]
+    if feature_version == 2:
+        groups.append(("datadir", _DATADIR))
+    names = [f"ember_{g}:{f}" for g, fields in groups for f in fields]
+    assert len(names) == EMBER_DIM[feature_version], len(names)
+    return names
+
+
+def readable_ember_name(name: str, feature_version: int = 2) -> str:
+    """Map a legacy column name ``ember:<i>`` (runs made before named features) to its
+    readable name; any other name is returned unchanged."""
+    if name.startswith("ember:") and name[6:].isdigit():
+        names = ember_feature_names(feature_version)
+        i = int(name[6:])
+        if i < len(names):
+            return names[i]
+    return name
+
 
 def _memmap(path: Path, dtype, ncols: int | None = None) -> np.ndarray:
     arr = np.memmap(path, dtype=dtype, mode="r")
@@ -72,7 +119,7 @@ def load_ember(ember_dir: str | Path, feature_version: int = 2,
         sel = (keep >= lo) & (keep < hi)
         X[sel] = Xs[part][keep[sel] - lo]
 
-    names = [f"ember:{i}" for i in range(dim)]
+    names = ember_feature_names(feature_version)
     return Dataset(
         X=X, y=y[keep].astype(int), feature_names=names, sha256=sha[keep],
         first_seen=first_seen[keep],
