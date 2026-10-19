@@ -43,3 +43,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Published YARA rules copied by scripts/prepare_yara_rules.py (check the licence first)
+rules/yara_published/

@@ -1,0 +1,6 @@
+# Raw-file track inside the isolated VM (NFR-01).
+#   pemd extract --malware-dir data/raw/malware --benign-dir data/raw/benign --dates data/raw/first_seen.csv
+#   pemd --config configs/raw_track.yaml run --name raw --cv
+# Benign files have no first-seen date, so the split is stratified (time_based: auto).
+baseline:
+  yara_rules: rules/yara_published   # built by scripts/prepare_yara_rules.py

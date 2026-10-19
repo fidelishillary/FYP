@@ -1,0 +1,7 @@
+# RQ2 comparison on the raw-file track: same as raw_track.yaml but WITHOUT the RE review
+# (purely statistical chi-square + mutual-information selection).
+#   pemd --config configs/raw_track_no_re.yaml run --dataset data/processed/raw.npz --name raw_without_re --cv
+baseline:
+  yara_rules: rules/yara_published
+selection:
+  re_review: null
