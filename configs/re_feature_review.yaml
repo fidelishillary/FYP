@@ -16,13 +16,13 @@ prioritise:
       Behaviour-bearing API capability groups (process injection, anti-debugging,
       dynamic API resolution, ...). Changing them changes what the program can do,
       so they survive byte-level mutation better than raw bytes.
-    evidence: "TODO: link case study note, e.g. docs/re_case_study/sample_01.md"
+    evidence: "Supported in context: sample_03.md (process_execution launches the dropped payload), sample_04.md (dynamic_resolution reveals the hidden import set). Limits: sample_07.md/sample_08.md (benign files trigger registry, screen_capture, anti_debug), sample_05.md (all zero for .NET, 56% of malware)."
   - pattern: "sec:entropy_max"
     rationale: "High-entropy sections indicate packed or encrypted payloads seen during unpacking."
-    evidence: "TODO"
+    evidence: "sample_04.md: UPX1 entropy 7.87 is real compression. Caveat sample_02.md: zlib-compressed DWARF debug sections reach 8.0 without packing, so read together with W+X."
   - pattern: "sec:n_wx"
     rationale: "Writable + executable sections are needed by self-modifying / unpacking stubs."
-    evidence: "TODO"
+    evidence: "sample_04.md: UPX0/UPX1 are RWX; the NRV loop writes the program into the empty UPX0 and jumps to the OEP (0x5e000a2e0). Benign sample_07.md/sample_08.md have no W+X section."
 
 discard:
   - pattern: "hdr:timedatestamp"
@@ -30,4 +30,4 @@ discard:
     evidence: "Design decision, report Section 3.3.1"
   - pattern: "hdr:checksum"
     rationale: "Mostly zero for both classes; set or cleared freely without changing behaviour."
-    evidence: "TODO: confirm on dataset"
+    evidence: "Confirmed: hdr:checksum_zero is the top SHAP feature for benign sample_07.md/sample_08.md (a Microsoft build artefact); see run raw_no_artifacts."

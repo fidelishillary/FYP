@@ -11,10 +11,10 @@ prioritise:
     evidence: "Measured: top-300 statistical selection kept 1 of 1,280 import columns, yet imports are the most important group when all features are kept (run ember_allfeat)."
   - pattern: "ember_section:*"
     rationale: "Section sizes, entropy and entry-section characteristics expose packing and W+X stubs."
-    evidence: "TODO: link Ghidra case study note on a packed sample"
+    evidence: "Raw-track equivalent in docs/re_case_study/sample_04.md: W+X sections, an empty-on-disk section and high section entropy expose the UPX unpacking stub."
   - pattern: "ember_general:has_*"
     rationale: "Presence of signature, TLS, debug info, resources and relocations reflects how the binary was built and protected."
-    evidence: "TODO"
+    evidence: "Mixed: sample_03.md (resources carry the dropped payload), sample_08.md (signature/debug flags reflect the build). Kept prioritised on EMBER; not used alone."
 
 discard:
   - pattern: "ember_header:coff_timestamp"
