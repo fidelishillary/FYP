@@ -10,29 +10,29 @@ Status key: ✅ implemented and tested · 🟡 implemented, still needs real dat
 |---|---|---|---|---|---|
 | FR-01 Accept PE, reject or log invalid/corrupted | Must | `features/extractor.py` `_parse`, `InvalidPEError`; `data/dataset.py` writes `*.rejected.csv` | `test_rejects_non_pe`, `test_rejects_truncated_pe`, `test_end_to_end` | Dataset composition and rejection counts | ✅ |
 | FR-02 Static features (header, imports/exports, opcode n-grams, sections/entropy, strings/bytes, metadata), no execution | Must | `features/extractor.py` (feature groups `hdr`, `sec`, `imp`, `api_cat`, `exp`, `op`, `byte_hist`, `str`, `meta`) | `test_header_and_section_features`, `test_imports_and_api_categories`, `test_strings_and_entropy` | Feature table (report Table 3.1) | ✅ |
-| FR-03 Python + pefile + LIEF, labelled vectors written to a dataset | Must | `FeatureExtractor`, `Dataset.save` (`.npz`) | `test_dataset_roundtrip`, `test_metadata_flags_reflect_empty_directories` | Appendix A | ✅ |
+| FR-03 Python + pefile + LIEF, labelled vectors written to a dataset | Must | `FeatureExtractor`, `Dataset.save` (`.npz`) | `test_dataset_roundtrip`, `test_metadata_flags_reflect_empty_directories`, `test_ember_feature_names_and_groups` | Appendix A | ✅ |
 | FR-04 Chi-square + mutual-information ranking | Must | `selection/selector.py` | `test_selector_respects_re_review` | `selection.csv`, feature selection results | ✅ |
-| FR-05 RE case study: retain / prioritise / discard | Must | `configs/re_feature_review.yaml`, consumed by the selector; `docs/re_case_study/` | `test_selector_respects_re_review` | RE case study chapter, Appendix B | 🟡 needs the Ghidra study |
+| FR-05 RE case study: retain / prioritise / discard | Must | `configs/re_feature_review.yaml`, consumed by the selector; `docs/re_case_study/` | `test_selector_respects_re_review` | RE case study chapter, Appendix B: `docs/re_case_study/` (8 notes + SUMMARY.md); evidence lines in both review files | ✅ 6 samples analysed (4 in Ghidra), 2 triaged |
 | FR-06 RF + XGBoost primary, SVM secondary | Must | `models/classifiers.py` | `test_end_to_end` | Classification metrics table | ✅ |
 | FR-07 Label + confidence score | Must | `malware_proba`; `predictions.csv` | `test_end_to_end` | — | ✅ |
 | FR-08 Configurable thresholds tuned on validation | Must | `gate/prioritisation.py` `DecisionGate`, `tune_thresholds`; `gate.json` | `test_gate_routing`, `test_tune_thresholds_meets_constraints` | Gate design and thresholds | ✅ |
-| FR-09 Signature (YARA-style) baseline on same test data | Must | `baseline/signature.py` (hash + YARA), `rules/yara/` | `test_hash_baseline`, `test_yara_baseline` | Baseline comparison (RQ4) | 🟡 swap in a published rule set |
+| FR-09 Signature (YARA-style) baseline on same test data | Must | `baseline/signature.py` (hash + YARA), `rules/yara/` | `test_hash_baseline`, `test_yara_baseline` | Baseline comparison (RQ4): Yara-Rules `malware/` commit 0f93570 (2022-04-12), 398 rule files, `scripts/prepare_yara_rules.py`; raw track: recall 0.27, FPR 0.044; hash baseline recall 0 | ✅ |
 | FR-10 Accuracy, precision, recall, F1, ROC-AUC, MCC, FPR, FNR, confusion matrix | Must | `evaluation/metrics.py`, `report.md` | `test_metrics_and_targets` | Table 4.1 | ✅ |
 | FR-11 Feature importance of best tree model | Must | `pipeline.py` → `feature_importance.csv` (group totals + hashed-bucket tokens) | `test_end_to_end` | RQ1 answer | ✅ |
-| FR-12 Static vs escalated proportion, per-path time | Must | `evaluation/hybrid.py` | `test_hybrid_policies` | Table 4.2, efficiency analysis | ✅ (dynamic time measured once CAPE runs) |
+| FR-12 Static vs escalated proportion, per-path time | Must | `evaluation/hybrid.py` | `test_hybrid_policies` | Table 4.2, efficiency analysis: EMBER 69.1% resolved statically; raw track 0.22 s static time per file (measured) | ✅ (dynamic time is a configured estimate) |
 | FR-13 k-fold CV + time-based split | Should | `pipeline.cross_validate`, `data/dataset.split` | `test_split_time_based`, `test_end_to_end` | Validation design | ✅ |
-| FR-14 Dynamic fallback in CAPE/Cuckoo | Should | `dynamic/cape.py`, `pemd scan --dynamic`, `evaluation.dynamic_verdicts` CSV | `test_sandbox_must_be_isolated` | Dynamic case study | 🟡 needs the lab sandbox |
+| FR-14 Dynamic fallback in CAPE/Cuckoo | Should | `dynamic/cape.py`, `pemd scan --dynamic`, `evaluation.dynamic_verdicts` CSV | `test_sandbox_must_be_isolated` | Reported as a limitation: hybrid results given as `oracle` (upper) and `static` (lower) bounds | ⬜ not done (Should): CAPE not deployed |
 | FR-15 Scan interface: verdict, confidence, influential features | Could | `pemd scan` (`cli.py`), `scanner.py`, web dashboard (`dashboard/`, Scan files + Monitoring pages) | `test_end_to_end`, `test_scanner_bytes_and_rejects`, `test_dashboard_pages_render` | Interface demo, dashboard screenshots | ✅ CLI + web dashboard |
-| FR-16 LSTM / sequence model | Could | — | — | — | ⬜ |
-| FR-17 Polymorphic-family robustness check | Could | — (reuse `pemd run` on a family-held-out dataset) | — | — | ⬜ |
+| FR-16 LSTM / sequence model | Could | — | — | Future work | ⬜ dropped (Could) |
+| FR-17 Polymorphic-family robustness check | Could | `data.holdout_families` split (`data/dataset.py`), `scripts/family_holdout.py` | `test_family_holdout_split` | Leave-one-family-out table: 11 families, mean unseen-family detection 0.988 (0.990 without build artefacts) | ✅ |
 
 ## Non-functional requirements
 
 | ID | How it is addressed |
 |---|---|
-| NFR-01 Isolated lab | `docs/safety_lab_setup.md`; `dynamic/cape.py` refuses any sandbox URL that does not resolve to a private or loopback address; dynamic analysis is off by default |
+| NFR-01 Isolated lab | Ubuntu 22.04 VM `fyp-analysis`, NAT disabled before unpacking (`scripts/unpack_samples.py` refuses to run with internet access); samples kept as AES zips until isolated; `docs/safety_lab_setup.md`; `dynamic/cape.py` refuses any sandbox URL that does not resolve to a private or loopback address; dynamic analysis is off by default |
 | NFR-02 Prefer feature datasets | `pemd import-ember`; raw extraction is documented as VM-only |
-| NFR-03 VM snapshots | `docs/safety_lab_setup.md` snapshot procedure |
+| NFR-03 VM snapshots | Snapshots `clean-base` → `clean-isolated` → `dataset-ready`; `docs/safety_lab_setup.md` |
 | NFR-04 Reproducibility | Fixed `seed`; pinned `requirements.txt`; each run stores `config.yaml` and `environment.json` (versions, git commit) |
 | NFR-05 Efficiency | `routing.static_resolution_rate`, `workload_reduction_vs_fully_dynamic` and timing in every report |
 | NFR-06 Interpretability | Global importances, group totals, hashed-bucket vocabulary, TreeSHAP contributions in `pemd scan` |
@@ -43,7 +43,7 @@ Status key: ✅ implemented and tested · 🟡 implemented, still needs real dat
 
 | RQ | Produced by |
 |---|---|
-| RQ1 most useful static features | `feature_importance.csv`, the feature group totals in `report.md`, `selection.csv` |
-| RQ2 RE-guided stable features | `configs/re_feature_review.yaml` plus the case study notes. Compare runs with and without the review (point `selection.re_review` at an empty file) |
-| RQ3 best model | Test metrics plus CV mean ± std per model |
-| RQ4 hybrid vs signature baseline | "Static-first hybrid vs baselines" table and routing/efficiency table |
+| RQ1 most useful static features | `feature_importance.csv`, group totals (EMBER groups named via `pemd.data.ember`): imports 45–51% on EMBER; byte/opcode/section features on the raw track |
+| RQ2 RE-guided stable features | Runs `ember` vs `ember_re` vs `ember_allfeat`, `raw` vs `raw_without_re` vs `raw_no_artifacts`; `docs/re_case_study/SUMMARY.md` |
+| RQ3 best model | XGBoost on every track; EMBER learning curve (12k/50k/100k) |
+| RQ4 hybrid vs signature baseline | EMBER: static FPR 15.5% → hybrid 4.5% (upper bound), 69.1% resolved statically; raw: YARA recall 0.27, hash 0, ML 0.978–1.0 |
