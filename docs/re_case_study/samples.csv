@@ -1,0 +1,9 @@
+id,sha256,label,family,role,why,dotnet,imports,entropy_max
+sample_01,076b561bddf88c1482feefb2cbbc11a82b7829528988fd246a6e4a245eb48e73,malware,Amadey,"native, rich import table",Most API-capability hits in its family: tests whether api_cat reflects real behaviour,False,593,6.71
+sample_02,c5b47b6fb38693695b05ccabc05abb68ca5a620590eaf068c93da0f7f03bd66a,malware,LummaStealer,"native, packed/encrypted",Highest section entropy in its family: packing and runtime API resolution,False,44,8.0
+sample_03,67903b4fd435e1acb4a1f5f1320ccaf3a69bd6db9b6d0c8ccd59344362a286d1,malware,WannaCry,native ransomware,"Well-documented behaviour (crypto, file enumeration): checks crypto/file api_cat",False,71,6.32
+sample_04,975f5c0dd3dc7fc5ad3c42c296fc44dca55dfc9480b9335752cc4e099d93bcf2,malware,Vidar,native infostealer,W+X sections / high entropy: unpacking stub evidence for sec:n_wx,False,4,7.87
+sample_05,3db1e114a5585f371b675171657d6d4fcb7c0fe78ee1ce7e8af8819b34516dcd,malware,AgentTesla,.NET malware,Import table is only mscoree!_CorExeMain: explains why api_cat is empty for 56% of malware,True,1,7.9
+sample_06,234d8d99629d1dcf9d74b0f9911af86548ff8a2a1bfcaf07a73d80491e53fdd5,malware,(no family label),missed by the model,Malware scored p=0.05 (cleared as benign) in run raw_no_artifacts: why?,False,405,6.43
+sample_07,3eb01639b7313743e14084dba0fe99e20e34769edb8dbae2072ec6502df0b4bf,benign,benign: PhotoAcq.dll,benign but escalated,Benign file scored p=0.67: what looks suspicious about it?,False,704,7.0
+sample_08,8485df8a54d5d666128acd015be589e6b6d6bc93d3f3fbeede2fe87eadce6051,benign,benign: IMEWDBLD.EXE,typical benign,Ordinary Microsoft system program for contrast,False,269,6.11
