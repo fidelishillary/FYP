@@ -157,3 +157,24 @@ def test_ember_feature_names_and_groups():
     assert names[616] == "ember_general:size" and names[-1] == "ember_datadir:dir14_vaddr"
     assert readable_ember_name("ember:616") == "ember_general:size"
     assert group_of("ember:700") == "ember_section" and group_of("imp:n_dlls") == "imp"
+
+
+def test_family_holdout_split(cfg, tmp_path):
+    import csv
+
+    ds = _toy(n=120)
+    fams = ["A", "B", "C"]
+    with open(tmp_path / "fam.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["sha256", "signature"])
+        for i in range(len(ds)):
+            if ds.y[i] == 1:
+                w.writerow([ds.sha256[i], fams[i % 3]])
+    cfg["data"]["holdout_families"] = ["B"]
+    cfg["data"]["families_csv"] = str(tmp_path / "fam.csv")
+    s = split(ds, cfg)
+    held = {ds.sha256[i] for i in range(len(ds)) if ds.y[i] == 1 and i % 3 == 1}
+    assert held <= set(ds.sha256[s.test])
+    assert not held & set(ds.sha256[np.concatenate([s.train, s.val])])
+    assert s.method.startswith("family_holdout")
+    assert (ds.y[s.test] == 0).sum() == len(held)

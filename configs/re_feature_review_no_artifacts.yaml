@@ -1,0 +1,44 @@
+# Validity check for the raw-file track (threats to validity, docs/evaluation_protocol.md).
+# My benign set is ~70% Microsoft-signed system/program files, so a model can separate the
+# classes by HOW a file was built (toolchain, checksum, OS version, CFG, debug info, signature)
+# instead of WHAT it does. This review keeps the RE-guided priorities but discards those
+# build-environment artefacts, to measure how much accuracy depends on them.
+prioritise:
+  - pattern: "api_cat:*"
+    rationale: "Behaviour-bearing API capability groups (same as re_feature_review.yaml)."
+    evidence: "see re_feature_review.yaml"
+  - pattern: "sec:entropy_max"
+    rationale: "Packing / encryption indicator."
+    evidence: "see re_feature_review.yaml"
+  - pattern: "sec:n_wx"
+    rationale: "Self-modifying / unpacking stubs."
+    evidence: "see re_feature_review.yaml"
+
+discard:
+  - pattern: "hdr:timedatestamp"
+    rationale: "Forgeable; temporal leakage."
+    evidence: "report Section 3.3.1"
+  - pattern: "hdr:checksum*"
+    rationale: "Set by Microsoft's release tooling, usually zero for other compilers: a publisher artefact."
+    evidence: "Top feature (hdr:checksum_zero) of run raw; benign set is ~70% Microsoft files."
+  - pattern: "hdr:major_*_version"
+    rationale: "Linker/OS/image versions reflect the toolchain and build date, not behaviour."
+    evidence: "hdr:major_os_version ranked 4th in run raw."
+  - pattern: "hdr:dllchar_*"
+    rationale: "ASLR/CFG/NX flags reflect compiler settings; modern Microsoft builds set them all."
+    evidence: "hdr:dllchar_guard_cf in the top 10 of run raw."
+  - pattern: "hdr:char_large_address_aware"
+    rationale: "Linker flag (toolchain artefact)."
+    evidence: "Top 10 of run raw."
+  - pattern: "meta:has_signature"
+    rationale: "Authenticode presence mirrors the publisher of my benign set."
+    evidence: "Benign manifest: 403/600 Microsoft Corporation."
+  - pattern: "meta:has_debug"
+    rationale: "Debug directory presence reflects build configuration."
+    evidence: "Top 15 of run raw_without_re."
+  - pattern: "meta:has_rich_header"
+    rationale: "Rich header identifies the Microsoft toolchain."
+    evidence: "Toolchain artefact."
+  - pattern: "meta:has_load_config"
+    rationale: "Load config (CFG tables) follows from compiler settings."
+    evidence: "Toolchain artefact."

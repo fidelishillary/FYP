@@ -1,0 +1,4 @@
+# Validity check: raw-file track without build-environment artefacts (see the review file).
+#   pemd --config configs/raw_no_artifacts.yaml run --dataset data/processed/raw.npz --name raw_no_artifacts --cv
+selection:
+  re_review: configs/re_feature_review_no_artifacts.yaml

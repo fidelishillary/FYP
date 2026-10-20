@@ -176,12 +176,48 @@ class Splits:
     method: str
 
 
+def load_families(csv_path: str | Path) -> dict[str, str]:
+    """sha256 -> family label from a CSV with ``sha256`` and ``signature`` columns
+    (e.g. data/raw/malwarebazaar_metadata.csv)."""
+    with open(csv_path, newline="", encoding="utf-8-sig") as fh:
+        return {r["sha256"].lower(): (r.get("signature") or "") for r in csv.DictReader(fh)}
+
+
+def family_holdout_split(ds: Dataset, cfg: dict, families: list[str],
+                         families_csv: str | Path) -> Splits:
+    """FR-17: every malware sample of the held-out ``families`` goes to the test set
+    (never seen in training), together with an equal number of random benign files.
+    The rest is split stratified into train/validation."""
+    from sklearn.model_selection import train_test_split
+
+    fam = load_families(families_csv)
+    held = {f.lower() for f in families}
+    rng = np.random.default_rng(cfg["seed"])
+    is_held = np.array([ds.y[i] == 1 and fam.get(str(ds.sha256[i]).lower(), "").lower() in held
+                        for i in range(len(ds))])
+    test_mal = np.flatnonzero(is_held)
+    if len(test_mal) == 0:
+        raise ValueError(f"no malware of families {families} in the dataset")
+    benign = np.flatnonzero(ds.y == 0)
+    test_ben = rng.choice(benign, size=min(len(test_mal), len(benign) // 3), replace=False)
+    test = np.sort(np.concatenate([test_mal, test_ben]))
+    rest = np.setdiff1d(np.arange(len(ds)), test)
+    fr = cfg["data"]["split"]
+    train, val = train_test_split(rest, test_size=fr["val"] / (fr["train"] + fr["val"]),
+                                  stratify=ds.y[rest], random_state=cfg["seed"])
+    return Splits(np.sort(train), np.sort(val), test, "family_holdout:" + ",".join(families))
+
+
 def split(ds: Dataset, cfg: dict) -> Splits:
-    """Stratified 70/15/15 split, or a time-ordered split when dates exist (FR-13)."""
+    """Stratified 70/15/15 split, or a time-ordered split when dates exist (FR-13), or a
+    family hold-out split when ``data.holdout_families`` is set (FR-17)."""
     from sklearn.model_selection import train_test_split
 
     fr = cfg["data"]["split"]
     seed = cfg["seed"]
+    if cfg["data"].get("holdout_families"):
+        return family_holdout_split(ds, cfg, list(cfg["data"]["holdout_families"]),
+                                    cfg["data"]["families_csv"])
     mode = cfg["data"].get("time_based", "auto")
     dated = np.array([bool(d) for d in ds.first_seen])
     use_time = mode is True or (mode == "auto" and len(ds) > 0 and dated.all())

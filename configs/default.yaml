@@ -28,6 +28,8 @@ data:                                   # report Section 3.5
   split: { train: 0.70, val: 0.15, test: 0.15 }
   time_based: auto                      # auto | true | false (FR-13: time split where dates exist)
   balance_to: null                      # e.g. 6000 to sub-sample each class to 6,000
+  holdout_families: []                  # FR-17: malware families kept out of training (test only)
+  families_csv: data/raw/malwarebazaar_metadata.csv   # sha256,signature for holdout_families
 
 selection:                              # FR-04
   k: 300                                # number of features kept
